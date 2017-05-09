@@ -1,5 +1,43 @@
-SECTION "rom", HOME
-  LD SP,$fffe		; $0000  Setup Stack
+SECTION "vblank",ROM0[$40]
+  nop
+  ;; jp    vblank
+  reti
+
+SECTION "timer" ,ROM0[$50]
+  nop
+  ;; jp    timer
+  reti
+
+SECTION "start",ROM0[$100]
+  nop
+  jp    start
+
+; = CATRIDGE HEADER =================================================
+
+  ; Nintendo logo. must be exactly as given
+  DB $CE,$ED,$66,$66,$CC,$0D,$00,$0B,$03,$73,$00,$83,$00,$0C,$00,$0D
+  DB $00,$08,$11,$1F,$88,$89,$00,$0E,$DC,$CC,$6E,$E6,$DD,$DD,$D9,$99
+  DB $BB,$BB,$67,$63,$6E,$0E,$EC,$CC,$DD,$DC,$99,$9F,$BB,$B9,$33,$3E
+  
+  DB "AVIKTEST",0,0,0,0,0,0,0 ; title, upper case ASCII, 15 bytes
+  DB 0   ; not a GBC catridge
+  DB 0,0 ; new licensee code, high and low nibbles. not important
+  DB 0   ; not SGB
+  DB 0   ; catridge type, ROM only
+  DB 0   ; ROM size, 256Kbit = 32KByte = 2 banks
+  DB 0   ; RAM size, no RAM
+  DB 1   ; destination code, non-Japanese
+  DB $33 ; old licensee code, $33 => check new licensee code
+  DB 0   ; mask ROM version number, usually 0
+  DB 0   ; complement check. computed by rgbfix. important.
+  DW 0   ; checksum. computed by rgbfix. not important.
+
+; = INITIALIZATION ==================================================
+start:
+        NOP
+        DI
+
+        LD SP,$fffe		; $0000  Setup Stack
 
 	XOR A			; $0003  Zero the memory from $8000-$9FFF [VRAM]
 	LD HL,$9fff		; $0004
@@ -27,8 +65,8 @@ Addr_0007:
 	LD HL,$8010		; $0024
 Addr_0027:
 	LD A,[DE]		; $0027
-	CALL $0095		; $0028
-	CALL $0096		; $002b
+	CALL Routine_0095		; $0028
+	CALL Routine_0096		; $002b
 	INC DE		; $002e
 	LD A,E		; $002f
 	CP $34		; $0030
@@ -111,7 +149,9 @@ Addr_0086:
 
 	; ==== Graphic routine ====
 
+Routine_0095: 
 	LD C,A		; $0095  "Double up" all the bits of the graphics data
+Routine_0096: 
 	LD B,$04		; $0096     and store in Video RAM
 Addr_0098:
 	PUSH BC		; $0098
@@ -164,3 +204,5 @@ Addr_00F4:
 	ADD [HL]		; $00f9
 	LD A,$01		; $00fc
 	LD [$FF00+$50],A	; $00fe	;turn off DMG rom
+
+        JP start
