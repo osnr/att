@@ -47,8 +47,11 @@ Addr_0007:
         BIT 7,H                 ; $0008
         JR NZ, Addr_0007        ; $000a
 
-ConfigureSound: 
+ConfigureSound:
         LD HL,$ff26             ; $000c  NR52 Sound on
+        LD A,$0                 ; Destroy boot ROM sound registers now.
+
+        LD [HL],A
         LD C,$11                ; $000f
         LD A,$80                ; $0011
         LD [HL-],A              ; $0013  Postdecrement. NR52 [$FF26] = Bit 7 on (all sound on)
