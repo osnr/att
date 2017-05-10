@@ -1,5 +1,5 @@
 %.gb: %.o
-	rgblink -o $@ $^
+	rgblink -o $@ -n $(@:.gb=.sym) -m $(@:.gb=.map) $^
 	rgbfix -v $@
 
 %.o: %.asm
