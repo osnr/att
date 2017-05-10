@@ -67,44 +67,48 @@ ConfigureGfx:
         LD A,$fc                ; $001d  Setup BG palette
         LD [$FF00+$47],A        ; $001f
 
-        LD DE,Logo              ; $0021  Convert and load logo data from cart into Video RAM
-        LD HL,$8010             ; $0024
-Addr_0027:
-        LD A,[DE]               ; $0027
-        CALL Routine_0095               ; $0028
-        CALL Routine_0096               ; $002b
-        INC DE          ; $002e
-        LD A,E          ; $002f
-        CP $34          ; $0030
-        JR NZ, Addr_0027        ; $0032
+;; Commented out logo-copying block:
+;;         LD DE,Logo              ; $0021  Convert and load logo data from cart into Video RAM
+;;         LD HL,$8010             ; $0024
+;; Addr_0027:
+;;         LD A,[DE]               ; $0027
+;;         CALL Routine_0095               ; $0028
+;;         CALL Routine_0096               ; $002b
+;;         INC DE          ; $002e
+;;         LD A,E          ; $002f
+;;         CP $34          ; $0030
+;;         JR NZ, Addr_0027        ; $0032
 
-        LD DE,LogoMore          ; $0034  Load 8 additional bytes into Video RAM
-        LD B,$08                ; $0037
-Addr_0039:
-        LD A,[DE]               ; $0039
-        INC DE          ; $003a
-        LD [HL+],A              ; $003b
-        INC HL          ; $003c
-        DEC B                   ; $003d
-        JR NZ, Addr_0039        ; $003e
+;;         LD DE,LogoMore          ; $0034  Load 8 additional bytes into Video RAM
+;;         LD B,$08                ; $0037
+;; Addr_0039:
+;;         LD A,[DE]               ; $0039
+;;         INC DE          ; $003a
+;;         LD [HL+],A              ; $003b
+;;         INC HL          ; $003c
+;;         DEC B                   ; $003d
+;;         JR NZ, Addr_0039        ; $003e
 
-        LD A,$19                ; $0040  Setup background tilemap
-        LD [$9910],A    ; $0042
-        LD HL,$992f             ; $0045
-Addr_0048:
-        LD C,$0c                ; $0048
-Addr_004A:
-        DEC A                   ; $004a
-        JR Z, Addr_0055         ; $004b
-        LD [HL-],A              ; $004d
-        DEC C                   ; $004e
-        JR NZ, Addr_004A        ; $004f
-        LD L,$0f                ; $0051
-        JR Addr_0048    ; $0053
+;;         LD A,$19                ; $0040  Setup background tilemap to point to tile data
+;;         LD [$9910],A    ; $0042
+;;         LD HL,$992f             ; $0045 
+
+;;   ;;  Some kind of copy-loop
+;; Addr_0048:
+;;         LD C,$0c                ; $0048
+;; Addr_004A:
+;;         DEC A                   ; $004a
+;;         JR Z, Addr_0055         ; $004b
+;;         LD [HL-],A              ; $004d
+;;         DEC C                   ; $004e
+;;         JR NZ, Addr_004A        ; $004f
+;;         LD L,$0f                ; $0051 HL = $990f
+;;         JR Addr_0048            ; $0053 start over?
 
         ; === Scroll logo on screen, and play logo sound===
 
 Addr_0055:
+;;  Note that A is conditioned to be 0 before the jump in the copy-loop.
         LD H,A          ; $0055  Initialize scroll count, H=0
         LD A,$64                ; $0056
         LD D,A          ; $0058  set loop count, D=$64
@@ -112,46 +116,51 @@ Addr_0055:
         LD A,$91                ; $005b
         LD [$FF00+$40],A        ; $005d  Turn on LCD, showing Background
         INC B                   ; $005f  Set B=1
-Addr_0060:
+SoundCountdown:
         LD E,$02                ; $0060
-Addr_0062:
+ResetCThenWaitForVblank:
         LD C,$0c                ; $0062
-Addr_0064:
-        LD A,[$FF00+$44]        ; $0064  wait for screen frame
-        CP $90          ; $0066
-        JR NZ, Addr_0064        ; $0068
-        DEC C                   ; $006a
-        JR NZ, Addr_0064        ; $006b
-        DEC E                   ; $006d
-        JR NZ, Addr_0062        ; $006e
+WaitForVblank:
+        LD A,[$FF00+$44]        ; $0064  wait for screen frame vblank 
+        CP $90                  ; $0066 ([$FF44] = 144)
+        JR NZ, WaitForVblank    ; $0068
+
+        DEC C                   ; $006a Wait for the 12th vblank?
+        JR NZ, WaitForVblank    ; $006b
+
+        DEC E                   ; $006d Wait for the 2nd 12th vblank?
+        JR NZ, ResetCThenWaitForVblank ; $006e
 
         LD C,$13                ; $0070
-        INC H                   ; $0072  increment scroll count
-        LD A,H          ; $0073
-        LD E,$83                ; $0074
-        CP $62          ; $0076  $62 counts in, play sound #1
-        JR Z, Addr_0080         ; $0078
-        LD E,$c1                ; $007a
-        CP $64          ; $007c
-        JR NZ, Addr_0086        ; $007e  $64 counts in, play sound #2
-Addr_0080:
+        INC H                   ; $0072  Increment scroll count.
+        LD A,H                  ; $0073
+        LD E,$83                ; $0074  Sound #1.
+        CP $62                  ; $0076  $62 counts in, play sound #1
+        JR Z, PlaySound         ; $0078
+        LD E,$c1                ; $007a  Sound #2.
+        CP $64                  ; $007c
+        JR NZ, SkipPlaySound    ; $007e  $64 counts in, play sound #2
+
+PlaySound:
+        ;; E is an 'argument' what sound to play
         LD A,E          ; $0080  play sound
-        LD [$FF00+C],A  ; $0081
-        INC C                   ; $0082
-        LD A,$87                ; $0083
-        LD [$FF00+C],A  ; $0085
-Addr_0086:
+        LD [$FF00+C],A  ; $0081  NR13 [$FF13] = $C1
+        INC C           ; $0082
+        LD A,$87        ; $0083
+        LD [$FF00+C],A  ; $0085  NR14 [$FF14] = $87
+
+SkipPlaySound:
         LD A,[$FF00+$42]        ; $0086
         SUB B                   ; $0088
         LD [$FF00+$42],A        ; $0089  scroll logo up if B=1
         DEC D                   ; $008b  
-        JR NZ, Addr_0060        ; $008c
+        JR NZ, SoundCountdown   ; $008c
 
         DEC B                   ; $008e  set B=0 first time
         JR NZ, Addr_00E0        ; $008f    ... next time, cause jump to "Nintendo Logo check"
 
         LD D,$20                ; $0091  use scrolling loop to pause
-        JR Addr_0060    ; $0093
+        JR SoundCountdown       ; $0093
 
         ; ==== Graphic routine ====
 
