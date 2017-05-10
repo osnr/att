@@ -188,7 +188,13 @@ load_bg:
   ; load background into Background Tile Map
   ld hl,attgameboy_map_data
   ld de,$9800
-  ld bc,$10
+  ld bc,$6
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$9820
+  ld bc,$6
+  add hl,bc
   call memcpy
 
   ret
