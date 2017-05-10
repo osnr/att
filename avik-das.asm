@@ -176,7 +176,7 @@ load_bg:
   ;; ; reset the screen position
   ld a,$C9
   ld [$ff43],a ; scrollx will always be this
-  ld a,$ff
+  ld a,$60
   ld [BGSCRL],a
   call scroll_bg
 
