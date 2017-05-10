@@ -27,11 +27,11 @@ SECTION "vblank",ROM0[$40]
 
 SECTION "timer" ,ROM0[$50]
   nop
-  reti
+  jp timer
 
 SECTION "start",ROM0[$100]
+  nop
   jp start
-  reti
 
   ; = CATRIDGE HEADER =================================================
 
@@ -83,15 +83,15 @@ continue_init:
   ; TODO init ram variables
 
   call load_bg
+  call start_timer
 
   ld a,%11010101
   ld [$ff40],a   ; write it to the LCD Control register
 
-
-  ;; ld a,%00000101 ; enable V-Blank interrupt
-  ;;                ; enable timer   interrupt
-  ;; ld [$ffff],a
-  ;; ei
+  ld a,%00000101 ; enable V-Blank interrupt
+                 ; enable timer   interrupt
+  ld [$ffff],a
+  ei
 
   ; = MAIN LOOP =======================================================
 
@@ -171,11 +171,12 @@ scroll_bg:
   ld a,[BGSCRL]
   ld [$ff42],a ; set scrolly
   ret
-  
+
 load_bg:
   ;; ; reset the screen position
-  ld a,0
-  ld [$ff43],a ; scrollx will always be 0
+  ld a,$C9
+  ld [$ff43],a ; scrollx will always be this
+  ld a,$ff
   ld [BGSCRL],a
   call scroll_bg
 
@@ -273,6 +274,18 @@ load_bg:
 
   ret
 
+start_timer:
+  ; The timer will be incremented 4096 times each second, and each time
+  ; it overflows, it will be reset to 0. This means that the timer will
+  ; overflow every (1/4096) * 256 = 0.0625s.
+  ld a,0         ; the value of rTIMA after it overflows
+  ld [$ff06],a
+  ld a,%00000100 ; enable the timer
+                 ; increment rTIMA at 4096Hz
+  ld [$ff07],a
+
+  ret
+
 vblank:
   push af
   push bc
@@ -283,4 +296,17 @@ vblank:
   pop  de
   pop  bc
   pop  af
+  reti
+
+timer:
+  push af
+  push bc
+  push de
+  push hl
+  ld hl,BGSCRL
+  dec [hl]
+  pop hl
+  pop de
+  pop bc
+  pop af
   reti
