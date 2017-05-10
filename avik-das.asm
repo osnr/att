@@ -136,7 +136,7 @@ zeromem:
     ; assumes:
     ;   bc > 0
 .zeromem_loop:
-  ld a,0    ; we will only be writing zeros
+  ld a,$37    ; we will only be writing 37
   ld [de],a ; store one byte in the destination
   inc de    ; prepare to write another byte
 
@@ -186,6 +186,10 @@ load_bg:
   call memcpy
 
   ; load background into Background Tile Map
+  ld de,$9800
+  ld bc,$3ff
+  call zeromem
+
   ld hl,attgameboy_map_data
   ld de,$9800
   ld bc,$6
@@ -194,6 +198,76 @@ load_bg:
   ld hl,attgameboy_map_data
   ld de,$9820
   ld bc,$6
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$9840
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$9860
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$9880
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$98A0
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$98C0
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$98E0
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  call memcpy
+
+  ld hl,attgameboy_map_data
+  ld de,$9900
+  ld bc,$6
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
+  add hl,bc
   add hl,bc
   call memcpy
 
