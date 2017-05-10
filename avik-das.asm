@@ -19,15 +19,13 @@
 
 SECTION "RAM",WRAM0[$c000]
 
-BGSCRL: DB ; amount to scroll the background by
-
 SECTION "vblank",ROM0[$40]
   nop
-  jp vblank
+  ;; jp vblank
 
 SECTION "timer" ,ROM0[$50]
   nop
-  jp timer
+  ;; jp timer
 
 SECTION "start",ROM0[$100]
   nop
@@ -83,17 +81,72 @@ continue_init:
   ; TODO init ram variables
 
   call load_bg
+  call init_audio
   call start_timer
 
   ld a,%11010101
   ld [$ff40],a   ; write it to the LCD Control register
 
-  ld a,%00000101 ; enable V-Blank interrupt
-                 ; enable timer   interrupt
-  ld [$ffff],a
-  ei
+  ;; ld a,%00000101 ; enable V-Blank interrupt
+  ;;                ; enable timer   interrupt
+  ;; ld [$ffff],a
+  ;; ei
 
   ; = MAIN LOOP =======================================================
+
+  ld h, a                     ; initialize scroll count, H = 0
+
+  ld a, $64
+  ld d, $84                       ; set loop count, D = $64
+  ld [$ff42],a
+  ld a, $91
+  ld [$ff40],a
+  inc b
+soundcountdown:
+  ld e, $02
+resetc:
+  ld c, $0c
+waitforvblank:
+  ld a,[$ff44]
+  cp $90
+  jr nz, waitforvblank
+
+  dec c
+  jr nz, waitforvblank
+
+  dec e
+  jr nz, resetc
+  ld c, $13
+
+  inc h         ; increment scroll count
+  ld a, h
+
+  ld e, $83                     ; sound 1
+  cp $56
+  jr z, playsound
+
+  ld e, $c1                     ; sound 2
+  cp $58
+  jr nz, skipplaysound
+
+playsound:
+  ld a, e
+  ld [$ff13], a
+  ld a, $87
+  ld [$ff14], a
+
+skipplaysound:
+  ld a, [$ff42]
+  sub b
+  ld [$ff42], a
+  dec d
+  jr nz, soundcountdown
+
+  dec b
+  jr nz, loop
+
+  ld d, $20
+  jr soundcountdown
 
 loop:
   ;; halt
@@ -166,19 +219,12 @@ sppal:
 
 INCLUDE "att-gameboy.inc"
 
-; vim: ft=rgbasm:tw=72:ts=2:sw=2
-scroll_bg:
-  ld a,[BGSCRL]
-  ld [$ff42],a ; set scrolly
-  ret
-
 load_bg:
   ;; ; reset the screen position
   ld a,$C9
   ld [$ff43],a ; scrollx will always be this
   ld a,$60
-  ld [BGSCRL],a
-  call scroll_bg
+  ld [$ff42],a
 
   ; load the background tiles into the Tile Data Table
   ld hl,attgameboy_tile_data  ; source address
@@ -274,6 +320,19 @@ load_bg:
 
   ret
 
+init_audio:
+  ld a, $0
+  ld [$ff26], a
+
+  ld a, $80
+  ld [$ff26], a
+  ld [$ff11], a
+  ld a, $f3
+  ld [$ff12], a
+  ld [$ff25], a
+  ld a, $77
+  ld [$ff24], a
+
 start_timer:
   ; The timer will be incremented 4096 times each second, and each time
   ; it overflows, it will be reset to 0. This means that the timer will
@@ -285,28 +344,3 @@ start_timer:
   ld [$ff07],a
 
   ret
-
-vblank:
-  push af
-  push bc
-  push de
-  push hl
-  call scroll_bg
-  pop  hl
-  pop  de
-  pop  bc
-  pop  af
-  reti
-
-timer:
-  push af
-  push bc
-  push de
-  push hl
-  ld hl,BGSCRL
-  dec [hl]
-  pop hl
-  pop de
-  pop bc
-  pop af
-  reti
