@@ -188,7 +188,7 @@ load_bg:
 
   ; load background into Background Tile Map
   ld de,$9800
-  ld bc,$3ff
+  ld bc,$400
   call zeromem
 
   ld hl,attgameboy_map_data
